@@ -418,7 +418,7 @@ int Player::lerFramesVideo(void) {
 		frame_index++;
 		//if (frame_index > 2000) break;
 		if (packet.stream_index == audioStream) {
-			putAudioPacket(&audioq, &packet);
+			//putAudioPacket(&audioq, &packet); // commented out by galimba
 		}
 
 		if (packet.stream_index == videoStream) {
@@ -509,10 +509,10 @@ int Player::lerFramesVideo(void) {
 	for (int i = 0; i < diffs.size(); ++i)
 	{
 		fd_output_file << diffs[i] << std::endl;
-		if (diffs[i] > 500) flying_frame_counter++;
+		if (diffs[i] > 700) flying_frame_counter++; // changed from 500 by galimba
 	}
 
-	float flying_time_in_seconds = (float)flying_frame_counter * (float)pCodecCtx->bits_per_coded_sample;
+	float flying_time_in_seconds = (float)flying_frame_counter / (float)pCodecCtx->bits_per_coded_sample; // changed from mult to div by galimba
 	time_output_file << flying_time_in_seconds << std::endl;
 	std::cout << flying_time_in_seconds << std::endl;
 	fd_output_file.close();
