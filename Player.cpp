@@ -408,17 +408,30 @@ int Player::lerFramesVideo(void) {
 	SDL_Event evt;
 	int ret = 0;
 	uint64_t total_diff = 0;
-	uint8_t pixel_diff = 0;
+	uint64_t pixel_diff = 0;
 	uint64_t frame_diff = 0;
 	int frame_index = 0;
 	std::vector<uint64_t> diffs;
+
+	uint64_t expp = 2;
+
+	double frame_in_seconds = 0;
+
+	for (int i = 0; i < pFormatCtx->nb_streams; i++)
+	{
+		if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+		{
+			frame_in_seconds = 1/av_q2d(pFormatCtx->streams[i]->r_frame_rate);
+			break;
+		}
+	}
 
 	while (av_read_frame(pFormatCtx, &packet) >= 0) {
 
 		frame_index++;
 		//if (frame_index > 2000) break;
 		if (packet.stream_index == audioStream) {
-			//putAudioPacket(&audioq, &packet); // commented out by galimba
+			//putAudioPacket(&audioq, &packet);
 		}
 
 		if (packet.stream_index == videoStream) {
@@ -446,24 +459,41 @@ int Player::lerFramesVideo(void) {
 			}
 			uint64_t number_of_frames = pFormatCtx->streams[videoStream]->nb_frames;
 			//diffs.resize(number_of_frames);
+
+			uint8_t window_size = 2; // 2 - galimba
+
 			frame_diff = 0;
-			for (int i = pCodecCtx->height*start_h; i < pCodecCtx->height*end_h; i++)
+			for (int i = pCodecCtx->height*start_h + window_size; i < pCodecCtx->height*end_h - window_size; i++)
 			{
-				for (int j = pCodecCtx->width*start_w; j < pCodecCtx->width * end_w; j++)
+				for (int j = pCodecCtx->width*start_w + window_size; j < pCodecCtx->width * end_w - window_size; j++)
 				{
 					if (frame_index > 1)
 					{
-						pixel_diff = std::abs((int)prevFrame->data[0][i * pFrame->linesize[0] + j] - (int)pFrame->data[0][i * pFrame->linesize[0] + j]);
-						
-						if (pixel_diff < 30) pixel_diff = 0;
-						frame_diff += pixel_diff;
-						pFrame->data[0][i * pFrame->linesize[0] + j] = pixel_diff*5;
-					}
+						pixel_diff = 0;
+						uint8_t neig = 0;
 
+						pixel_diff = std::abs((int)prevFrame->data[0][i * pFrame->linesize[0] + j] - (int)pFrame->data[0][i * pFrame->linesize[0] + j]);
+						if (pixel_diff < 10) pixel_diff = 0;
+						for (int wi = i - window_size; wi <= i + window_size; wi++)
+						{
+							for (int wj = j - window_size; wj <= j + window_size; wj++)
+							{
+								if (wi != i || wj != j)
+								{
+									uint64_t tmp_p = std::abs((int)prevFrame->data[0][wi * pFrame->linesize[0] + wj] - (int)pFrame->data[0][wi * pFrame->linesize[0] + wj]);
+									//if (tmp_p < 10) tmp_p = 0;
+									if (tmp_p > 30) neig++;
+								}
+							}
+						}
+
+						frame_diff += pixel_diff * pow(2,neig);
+						pFrame->data[0][i * pFrame->linesize[0] + j] = pixel_diff ;
+					}
 				}
 			}/**/
 			diffs.push_back(frame_diff);
-			//std::cout << frame_diff << std::endl;
+			std::cout << frame_diff << std::endl;
 			/*for (int i = 0; i < pCodecCtx->height; i++)
 			{
 				for (int j = 0; j < pCodecCtx->width; j++)
@@ -509,10 +539,10 @@ int Player::lerFramesVideo(void) {
 	for (int i = 0; i < diffs.size(); ++i)
 	{
 		fd_output_file << diffs[i] << std::endl;
-		if (diffs[i] > 700) flying_frame_counter++; // changed from 500 by galimba
+		if (diffs[i] > 153784256) flying_frame_counter++; // 500 galimba
 	}
 
-	float flying_time_in_seconds = (float)flying_frame_counter / (float)pCodecCtx->bits_per_coded_sample; // changed from mult to div by galimba
+	float flying_time_in_seconds = (float)flying_frame_counter * (float)frame_in_seconds;
 	time_output_file << flying_time_in_seconds << std::endl;
 	std::cout << flying_time_in_seconds << std::endl;
 	fd_output_file.close();
