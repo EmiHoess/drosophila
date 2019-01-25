@@ -10,12 +10,12 @@ drosophila is a tiny program that evaluates videos and calculates the amount of 
     7  sudo apt-get install libavutil-dev
 
 # Compile with:
-g++ main.cpp Player.cpp -std=gnu++0x -lSDL2 -lavdevice -lavformat -lavfilter -lavcodec -lswresample -lswscale -lavutil -lz -lm -lpthread -lswresample
+g++ main.cpp Player.cpp -std=gnu++0x -lSDL2 -lavdevice -lavformat -lavfilter -lavcodec -lswresample -lswscale -lavutil -lz -lm -lpthread -lswresample -O3 -o drosophila
 
 
 # run:
 
-./a.out "20180823_134013.MOV" 0.08 0.7 0.25 0.8 0
+./drosophila 20180823_134013.MOV 0.08 0.7 0.25 0.8 0
 
 where:
 * "20180823_134013.MOV" video file name
