@@ -8,6 +8,8 @@ drosophila is a tiny program that evaluates videos and calculates the amount of 
     5  sudo apt-get install libavformat-dev
     6  sudo apt-get install libswscale-dev
     7  sudo apt-get install libavutil-dev
+    8  sudo apt-get install libavdevice-dev
+    9  sudo apt-get install libsdl2-dev
 
 # Compile with:
 g++ main.cpp Player.cpp -std=gnu++0x -lSDL2 -lavdevice -lavformat -lavfilter -lavcodec -lswresample -lswscale -lavutil -lz -lm -lpthread -lswresample -O3 -o drosophila

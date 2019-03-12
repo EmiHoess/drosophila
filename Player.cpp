@@ -529,7 +529,7 @@ int Player::lerFramesVideo(void) {
 						//pixel_diff -= (variance[j][i] / (float)ocurrences[j][i]);
 
 						//if (pixel_diff < 0) pixel_diff = 0;
-						float new_pixel_diff = std::abs(pixel_diff - (pixel_variance[prev_index][j][i] / (float)(frame_n + 1)));
+						//float new_pixel_diff = std::abs(pixel_diff - (pixel_variance[prev_index][j][i] / (float)(frame_n + 1)));
 
 						
 
