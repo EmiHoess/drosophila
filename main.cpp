@@ -25,7 +25,7 @@ int main(int argc, const char *argv[]) {
 	}
 	
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
-		cout << "There is something wrong with your SDL Libs. Can't run: " << SDL_GetError() << endl;
+		cout << "There is something wrong with your SDL Libs. Can't run" << endl;
 		exit(-1);
 	}
 

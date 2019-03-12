@@ -408,7 +408,8 @@ int Player::lerFramesVideo(void) {
 	SDL_Event evt;
 	int ret = 0;
 	uint64_t total_diff = 0;
-	uint64_t pixel_diff = 0;
+	int64_t pixel_diff = 0;
+	int64_t pixel_diff2 = 0;
 	uint64_t frame_diff = 0;
 	int frame_index = 0;
 	std::vector<uint64_t> diffs;
@@ -428,10 +429,10 @@ int Player::lerFramesVideo(void) {
 
 	while (av_read_frame(pFormatCtx, &packet) >= 0) {
 
-		frame_index++;
+		
 		//if (frame_index > 2000) break;
 		if (packet.stream_index == audioStream) {
-			//putAudioPacket(&audioq, &packet);
+			putAudioPacket(&audioq, &packet);
 		}
 
 		if (packet.stream_index == videoStream) {
@@ -448,7 +449,10 @@ int Player::lerFramesVideo(void) {
 				//show_error(res);
 				continue;
 			}
-			
+			frame_index++;
+
+			int actual_index = frame_index % 2;
+			int prev_index = (frame_index + 1) % 2;
 
 			for (int i = 0; i < pCodecCtx->height; i++)
 			{
@@ -458,37 +462,155 @@ int Player::lerFramesVideo(void) {
 				}
 			}
 			uint64_t number_of_frames = pFormatCtx->streams[videoStream]->nb_frames;
+			accumulation = 0;
 			//diffs.resize(number_of_frames);
 
-			uint8_t window_size = 2; // 2 - galimba
-
+			/**/
+			
 			frame_diff = 0;
 			for (int i = pCodecCtx->height*start_h + window_size; i < pCodecCtx->height*end_h - window_size; i++)
 			{
+				accumulation = 0;
+				if (frame_index > 1)
+				{
+					for (int ie = i - window_size; ie <= i + window_size; ie++)
+					{
+						for (int je = 0; je <= window_size_s * 2; je++)
+						{
+							/*if (ie == pCodecCtx->height*start_h && )
+							{
+
+							}*/
+							uint64_t tmp = std::abs((int)prevFrame->data[0][(int)(ie ) * pFrame->linesize[0] + (int)(je + pCodecCtx->width*start_w)] -
+								(int)tmpFrame[(int)(ie ) * pFrame->linesize[0] + (int)(je + pCodecCtx->width*start_w)]);
+							//uint64_t tmp = std::abs((int)prevFrame->data[0][(int)(i + pCodecCtx->height*start_h) * prevFrame->linesize[0] + (int)(j + pCodecCtx->width*start_w)]
+							//								- (int)pFrame->data[0][(int)(i + pCodecCtx->height*start_h) * pFrame->linesize[0] + (int)(j + pCodecCtx->width*start_w)]);
+
+							if (tmp > 0)
+							{
+								pixel_variance[actual_index][(int)(je + pCodecCtx->width*start_w)][ie] = pixel_variance[prev_index][(int)(je + pCodecCtx->width*start_w)][ie]+1;// = pixel_diff;
+								variance[actual_index][(int)(je + pCodecCtx->width*start_w)][ie] = variance[prev_index][(int)(je + pCodecCtx->width*start_w)][ie] + tmp;
+								//ocurrences[j][i]++;
+							}
+
+							if ((pixel_variance[prev_index][(int)(je + pCodecCtx->width*start_w)][ie] / (float)(frame_n + 1)) > 0.5 && (variance[prev_index][(int)(je + pCodecCtx->width*start_w)][ie] / (float)(frame_n + 1)) * 6 > tmp) tmp = 0;
+
+							accumulation += tmp;
+
+						}
+					}
+				}
 				for (int j = pCodecCtx->width*start_w + window_size; j < pCodecCtx->width * end_w - window_size; j++)
 				{
 					if (frame_index > 1)
 					{
 						pixel_diff = 0;
 						uint8_t neig = 0;
+						uint64_t window_pix_diff = 0;
 
-						pixel_diff = std::abs((int)prevFrame->data[0][i * pFrame->linesize[0] + j] - (int)pFrame->data[0][i * pFrame->linesize[0] + j]);
-						if (pixel_diff < 10) pixel_diff = 0;
-						for (int wi = i - window_size; wi <= i + window_size; wi++)
+						avg_value[j][i] = avg_value[j][i] * frame_n + (float)pFrame->data[0][i * pFrame->linesize[0] + j];
+						avg_value[j][i] /= (frame_n + 1);
+
+						pixel_diff = std::abs((int)avg_value[j][i] - (int)pFrame->data[0][i * pFrame->linesize[0] + j]);
+						pixel_diff = std::abs((int)prevFrame->data[0][i * prevFrame->linesize[0] + j] - (int)pFrame->data[0][i * pFrame->linesize[0] + j]);
+						
+						//pixel_diff = (pixel_diff + pixel_diff2) / 2;
+
+						if (pixel_diff > 0) 
 						{
-							for (int wj = j - window_size; wj <= j + window_size; wj++)
-							{
-								if (wi != i || wj != j)
-								{
-									uint64_t tmp_p = std::abs((int)prevFrame->data[0][wi * pFrame->linesize[0] + wj] - (int)pFrame->data[0][wi * pFrame->linesize[0] + wj]);
-									//if (tmp_p < 10) tmp_p = 0;
-									if (tmp_p > 30) neig++;
-								}
-							}
+							//pixel_variance[j][i]++;// = pixel_diff;
+							//variance[j][i] +=pixel_diff;
+												   //ocurrences[j][i]++;
 						}
 
-						frame_diff += pixel_diff * pow(2,neig);
-						pFrame->data[0][i * pFrame->linesize[0] + j] = pixel_diff ;
+						if ((pixel_variance[prev_index][j][i] / (float)(frame_n + 1)) > 0.5 && (variance[prev_index][j][i] / (float)(frame_n + 1)) * 7 > pixel_diff) pixel_diff = 0;
+						
+
+						//pixel_diff -= (variance[j][i] / (float)ocurrences[j][i]);
+
+						//if (pixel_diff < 0) pixel_diff = 0;
+						float new_pixel_diff = std::abs(pixel_diff - (pixel_variance[prev_index][j][i] / (float)(frame_n + 1)));
+
+						
+
+						if (j > pCodecCtx->width*start_w + window_size)
+						{
+							//if (pixel_diff < 10) pixel_diff = 0;
+							for (int wi = i - window_size; wi <= i + window_size; wi++)
+							{
+								//for (int wj = j - window_size; wj <= j + window_size; wj++)
+								{
+									int new_wj = j + window_size;
+									int old_wj = j - window_size - 1;
+
+
+									float new_wij_var = (pixel_variance[prev_index][new_wj][wi] / (float)(frame_n + 1));
+									float old_wij_var = (pixel_variance[prev_index][old_wj][wi] / (float)(frame_n + 1));
+									//if (wi != i || wj != j)
+									{
+										uint32_t dist_pix = window_size - std::abs(wi - i) + window_size - std::abs(new_wj - j);
+
+										int64_t tmp_p = std::abs((int)prevFrame->data[0][wi * pFrame->linesize[0] + new_wj] - (int)tmpFrame[wi * pFrame->linesize[0] + new_wj]);
+										int64_t old_tmp_p = std::abs((int)prevFrame->data[0][wi * pFrame->linesize[0] + old_wj] - (int)tmpFrame[wi * pFrame->linesize[0] + old_wj]);
+										
+										if (tmp_p > 0)
+										{
+											pixel_variance[actual_index][new_wj][wi] = pixel_variance[prev_index][new_wj][wi]+1;// = pixel_diff;
+											variance[actual_index][new_wj][wi] = variance[prev_index][new_wj][wi] + tmp_p;
+											//ocurrences[j][i]++;
+										}
+
+										/*if (old_tmp_p > 0)
+										{
+											pixel_variance[old_wj][wi]++;// = pixel_diff;
+											variance[old_wj][wi] += old_tmp_p;
+											//ocurrences[j][i]++;
+										}*/
+
+										if ((pixel_variance[prev_index][new_wj][wi] / (float)(frame_n + 1)) > 0.5 && (variance[prev_index][new_wj][wi] / (float)(frame_n + 1)) * 6 > tmp_p) tmp_p = 0;
+										if ((pixel_variance[prev_index][old_wj][wi] / (float)(frame_n + 1)) > 0.5 && (variance[prev_index][old_wj][wi] / (float)(frame_n + 1)) * 6 > old_tmp_p) old_tmp_p = 0;
+
+										accumulation += tmp_p;
+
+										if (old_tmp_p > accumulation)
+										{
+											int a = 42;
+										}
+
+										accumulation -= old_tmp_p;
+
+										//Update center value
+
+
+
+										//if ((pixel_variance[wj][wi] / (float)(frame_n + 1)) > 0.5 && (variance[wj][wi] / (float)(frame_n + 1)) * 7 > tmp_p) tmp_p = 0;
+										//if (tmp_p < 255) tmp_p = 0;
+										if (tmp_p >= 255)
+										{
+											//tmp_p = 1;
+										}
+										window_pix_diff += tmp_p;//std::pow(tmp_p, dist_pix); //dist_pix * tmp_p;// std::pow(2, dist_pix);
+										//if (tmp_p > 120) neig++;
+									}
+								}
+							}/**/
+						}
+
+						//variance[j][i] += window_pix_diff;
+						ocurrences[j][i]++;
+						
+						//if (neig > 6)
+						{
+							float new_diff = accumulation;// pow(window_pix_diff, 2) * pow(2, neig);
+							if (frame_diff < new_diff)
+							{
+								frame_diff = new_diff;
+							}
+						}
+						float nnp = pixel_diff;// std::abs(pixel_diff - (pixel_variance[j][i] / (float)(frame_n + 1)));
+						if ((pixel_variance[prev_index][j][i] / (float)(frame_n + 1)) > 0.5 && (variance[prev_index][j][i] / (float)(frame_n + 1))*7 > pixel_diff) nnp = 0;
+						//frame_diff += nnp;
+						pFrame->data[0][i * pFrame->linesize[0] + j] = nnp *5 ;
 					}
 				}
 			}/**/
@@ -501,7 +623,7 @@ int Player::lerFramesVideo(void) {
 					pFrame->data[0][i * pFrame->linesize[0] + j] = tmpFrame[i * pFrame->linesize[0] + j];
 				}
 			}/**/
-
+			frame_n++;
 			if (video_output)
 			{
 				SDL_UpdateYUVTexture(bmp, NULL, pFrame->data[0], pFrame->linesize[0],
@@ -539,7 +661,7 @@ int Player::lerFramesVideo(void) {
 	for (int i = 0; i < diffs.size(); ++i)
 	{
 		fd_output_file << diffs[i] << std::endl;
-		if (diffs[i] > 153784256) flying_frame_counter++; // 500 galimba
+		if (diffs[i] > 999999999) flying_frame_counter++;
 	}
 
 	float flying_time_in_seconds = (float)flying_frame_counter * (float)frame_in_seconds;

@@ -48,6 +48,19 @@ public:
 
 	bool video_output;
 
+	float variance[2][1920][1080];
+	float pixel_variance[2][1920][1080];
+	float avg_value[1920][1080];
+	uint32_t ocurrences[1920][1080];
+	uint64_t frame_n = 0;
+
+	uint64_t accumulation = 0;
+	uint64_t center_value = 0;
+
+#define window_size_s 4
+	uint8_t window_size = window_size_s;
+	uint32_t window_values[window_size_s][window_size_s];
+
 	Player(std::string afilename, float astart_w, float aend_w, float astart_h, float aend_h, bool avo) : video_output(avo), start_w(astart_w), end_w(aend_w), start_h(astart_h), end_h(aend_h) {
 
 		audioStream = -1;
@@ -59,6 +72,15 @@ public:
 
 		//open video
 		int res = avformat_open_input(&pFormatCtx, filename.c_str(), NULL, NULL);
+
+		for (int i = 0; i < 1920; i++)
+		{
+			for (int j = 0; j < 1080; j++)
+			{
+				variance[0][i][j] = 0;
+				variance[1][i][j] = 0;
+			}
+		}
 
 		//check video opened
 		if (res!=0){
