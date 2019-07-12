@@ -8,8 +8,6 @@
 #include <thread>
 
 #include "Player.hpp"
-#include "function_view.h"
-#include "concurrentqueue.h"
 //#include "execution_graph.h"
 
 #ifdef main
@@ -511,53 +509,7 @@ bool check_floating_point(std::string astring)
 }
 
 
-inline bool foo()
-{
-	int a = 42;
-	return false;
-}
 
-struct domain
-{
-	constexpr static int a = 0;
-};
-
-struct thread_pool
-{
-	std::vector<std::thread> threads;
-
-	thread_pool(uint8_t number_of_threads)
-	{
-		threads.resize(number_of_threads);
-	}
-};
-
-struct task_info
-{
-	tl::function_ref<void()> f;
-};
-
-struct execution_graph
-{
-	moodycamel::ConcurrentQueue<task_info> queue;
-
-
-	template<class F, class... Args>
-	void schedule(F&& f, Args&&... args)
-	{
-		//using return_type = typename std::result_of<F(Args...)>::type;
-		queue.enqueue({ []() { f(args); } });
-	}
-};
-
-enum class aenum { ALPHA, BETA };
-
-template<typename T,
-	class = typename std::enable_if<std::is_enum<T>::value>::type >
-class foobar
-{
-
-};
 
 filter_D filter;
 std::vector<uint64_t> diffs;
@@ -573,10 +525,7 @@ int main(int argc, const char *argv[])
 		exit(-1);
 	}
 
-	thread_pool p(8);
-
-
-
+	
 	//"20180823_134013.MOV"
 	std::string filename = std::string(argv[1]);
 
