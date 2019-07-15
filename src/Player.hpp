@@ -97,6 +97,7 @@ struct ffmpeg_frame
 {
 	audio_packet audio_p;
 	AVFrame *pFrame = NULL;
+	uint64_t flying_frame_counter = 0;
 	double frame_in_seconds = 0;
 };
 
@@ -109,6 +110,7 @@ struct filter_D
 	AVFrame wanted_frame;
 
 	ffmpeg_frame frame;
+	
 	AVPacket packet;
 
 	filter_info finfo;

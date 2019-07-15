@@ -241,7 +241,9 @@ int main(int argc, const char *argv[])
 				filter.finfo.b_height = filter.info_ffmpeg.pCodecCtx->height;
 				filter.finfo.b_offset = 3;
 
-				//filter_step(filter.finfo, diffs);
+				filter_step(filter.finfo, diffs);
+
+				if (!diffs.empty() && diffs[diffs.size() - 1] > 300) filter.frame.flying_frame_counter++;
 			}
 		}
 	});/**/
@@ -308,14 +310,17 @@ int main(int argc, const char *argv[])
 
 
 		ImGui::Begin("Video Information");                         
-		ImGui::Text("WASD.");
+		ImGui::Text("Current flying time: "); ImGui::Text(std::to_string(filter.frame.flying_frame_counter * filter.frame.frame_in_seconds).c_str());
+
 		if (ImGui::Button("Stop"))
 		{
 			done = true;
 		}
-
 		ImGui::End();
-        // Rendering
+        
+		
+		
+		// Rendering
         ImGui::Render();
         SDL_GL_MakeCurrent(window, gl_context);
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
@@ -328,16 +333,15 @@ int main(int argc, const char *argv[])
 	
 	filter_worker.join();
 
-	uint64_t flying_frame_counter = 0;
 	std::ofstream fd_output_file("f_d_" + filter.info_file.filename + ".txt");
 	std::ofstream time_output_file("f_t_" + filter.info_file.filename + ".txt");
 	for (int i = 0; i < diffs.size(); ++i)
 	{
 		fd_output_file << diffs[i] << std::endl;
-		if (diffs[i] > 999999999) flying_frame_counter++;
+		//if (diffs[i] > 999999999) filter.frame.flying_frame_counter++;
 	}
 
-	float flying_time_in_seconds = (float)flying_frame_counter * (float)filter.frame.frame_in_seconds;
+	float flying_time_in_seconds = (float)filter.frame.flying_frame_counter * (float)filter.frame.frame_in_seconds;
 	time_output_file << flying_time_in_seconds << std::endl;
 	std::cout << flying_time_in_seconds << std::endl;
 	fd_output_file.close();
