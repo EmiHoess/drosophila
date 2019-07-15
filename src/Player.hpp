@@ -1,6 +1,7 @@
 #include <iostream>
 #include <assert.h>
 #include <iostream>
+#include <fstream>
 extern "C"
 {
 #include <libavcodec/avcodec.h>
@@ -565,23 +566,10 @@ static int ffmpeg_step(ffmpeg_video& info_ffmpeg, ffmpeg_frame& frame, AVPacket&
 	else
 	{
 		return 1;
+		/**/
 
 	}
-	/*uint64_t flying_frame_counter = 0;
-	std::ofstream fd_output_file("f_d_" + info_file.filename + ".txt");
-	std::ofstream time_output_file("f_t_" + info_file.filename + ".txt");
-	for (int i = 0; i < diffs.size(); ++i)
-	{
-		fd_output_file << diffs[i] << std::endl;
-		if (diffs[i] > 999999999) flying_frame_counter++;
-	}
-
-	float flying_time_in_seconds = (float)flying_frame_counter * (float)frame.frame_in_seconds;
-	time_output_file << flying_time_in_seconds << std::endl;
-	std::cout << flying_time_in_seconds << std::endl;
-	fd_output_file.close();
-	time_output_file.close();
-	return 1;*/
+	
 }
 static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 {
