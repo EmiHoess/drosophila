@@ -76,8 +76,8 @@ struct filter_info
 	uint8_t window_size = window_size_s;
 	uint32_t window_values[window_size_s][window_size_s];
 
-	float variance[2][1920][1080];
-	float pixel_variance[2][1920][1080];
+	float variance[2][window_size_s*2][window_size_s * 2];
+	float pixel_variance[2][window_size_s * 2][window_size_s * 2];
 	float avg_value[1920][1080];
 
 	uint64_t frame_n = 0;
@@ -608,7 +608,8 @@ static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 		accumulation = 0;
 		if (finfo.frame_index > 1)
 		{
-			for (int ie = i - finfo.window_size; ie <= i + finfo.window_size; ie++)
+			//for (int ie = i - finfo.window_size; ie <= i + finfo.window_size; ie++)
+			for (int ie = 0; ie <= window_size_s * 2; ie++)
 			{
 				for (int je = 0; je <= window_size_s * 2; je++)
 				{
@@ -616,19 +617,19 @@ static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 					{
 
 					}*/
-					uint64_t tmp = std::abs((int)finfo.buffer[(int)(ie)* finfo.b_width + (int)(je + finfo.b_width*finfo.start_w)] -
-						(int)finfo.tmpFrame[(int)(ie)* finfo.b_width + (int)(je + finfo.b_width*finfo.start_w)]);
+					uint64_t tmp = std::abs((int)finfo.buffer[(int)(ie+ i - finfo.window_size)* finfo.b_width + (int)(je + finfo.b_width*finfo.start_w)] -
+						(int)finfo.tmpFrame[(int)(ie+ i - finfo.window_size)* finfo.b_width + (int)(je + finfo.b_width*finfo.start_w)]);
 					//uint64_t tmp = std::abs((int)prevFrame->data[0][(int)(i + info_ffmpeg.pCodecCtx->height*start_h) * prevFrame->linesize[0] + (int)(j + info_ffmpeg.pCodecCtx->width*start_w)]
 					//								- (int)pFrame->data[0][(int)(i + info_ffmpeg.pCodecCtx->height*start_h) * b_width + (int)(j + info_ffmpeg.pCodecCtx->width*start_w)]);
 
 					if (tmp > 0)
 					{
-						finfo.pixel_variance[actual_index][(int)(je + finfo.b_width*finfo.start_w)][ie] = finfo.pixel_variance[prev_index][(int)(je + finfo.b_width*finfo.start_w)][ie] + 1;// = pixel_diff;
-						finfo.variance[actual_index][(int)(je + finfo.b_width*finfo.start_w)][ie] = finfo.variance[prev_index][(int)(je + finfo.b_width*finfo.start_w)][ie] + tmp;
+						finfo.pixel_variance[actual_index][(int)(je )][ie] = finfo.pixel_variance[prev_index][(int)(je )][ie] + 1;// = pixel_diff;
+						finfo.variance[actual_index][(int)(je)][ie] = finfo.variance[prev_index][(int)(je )][ie] + tmp;
 						//ocurrences[j][i]++;
 					}
 
-					if ((finfo.pixel_variance[prev_index][(int)(je + finfo.b_width*finfo.start_w)][ie] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][(int)(je + finfo.b_width*finfo.start_w)][ie] / (float)(finfo.frame_n + 1)) * 6 > tmp) tmp = 0;
+					if ((finfo.pixel_variance[prev_index][(int)(je )][ie] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][(int)(je )][ie] / (float)(finfo.frame_n + 1)) * 6 > tmp) tmp = 0;
 
 					accumulation += tmp;
 
@@ -643,6 +644,11 @@ static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 				uint8_t neig = 0;
 				uint64_t window_pix_diff = 0;
 
+				uint32_t wwi, wj;
+
+				wwi = (i - (uint32_t)(finfo.b_height*finfo.start_h + finfo.window_size)) % finfo.window_size;
+				wj = (j - (uint32_t)(finfo.b_width*finfo.start_w + finfo.window_size)) % finfo.window_size;
+				
 				finfo.avg_value[j][i] = finfo.avg_value[j][i] * finfo.frame_n + (float)finfo.data[i * finfo.b_width + j];
 				finfo.avg_value[j][i] /= (finfo.frame_n + 1);
 
@@ -658,13 +664,13 @@ static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 										   //ocurrences[j][i]++;
 				}
 
-				if ((finfo.pixel_variance[prev_index][j][i] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][j][i] / (float)(finfo.frame_n + 1)) * 7 > pixel_diff) pixel_diff = 0;
+				if ((finfo.pixel_variance[prev_index][wj][wwi] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][wj][wwi] / (float)(finfo.frame_n + 1)) * 7 > pixel_diff) pixel_diff = 0;
 
 
 				//pixel_diff -= (variance[j][i] / (float)ocurrences[j][i]);
 
 				//if (pixel_diff < 0) pixel_diff = 0;
-				float new_pixel_diff = std::abs(pixel_diff - (finfo.pixel_variance[prev_index][j][i] / (float)(finfo.frame_n + 1)));
+				float new_pixel_diff = std::abs(pixel_diff - (finfo.pixel_variance[prev_index][wj][wwi] / (float)(finfo.frame_n + 1)));
 
 
 
@@ -678,9 +684,16 @@ static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 							int new_wj = j + finfo.window_size;
 							int old_wj = j - finfo.window_size - 1;
 
+							uint32_t owj, nwj;
 
-							float new_wij_var = (finfo.pixel_variance[prev_index][new_wj][wi] / (float)(finfo.frame_n + 1));
-							float old_wij_var = (finfo.pixel_variance[prev_index][old_wj][wi] / (float)(finfo.frame_n + 1));
+							owj = (new_wj - (uint32_t)(finfo.b_width*finfo.start_w + finfo.window_size)) % finfo.window_size;
+							nwj = (old_wj - (uint32_t)(finfo.b_width*finfo.start_w + finfo.window_size)) % finfo.window_size;
+
+							uint32_t wwi;
+							wwi = (wi - (uint32_t)(finfo.b_height*finfo.start_h + finfo.window_size)) % finfo.window_size;
+
+							float new_wij_var = (finfo.pixel_variance[prev_index][nwj][wwi] / (float)(finfo.frame_n + 1));
+							float old_wij_var = (finfo.pixel_variance[prev_index][owj][wwi] / (float)(finfo.frame_n + 1));
 							//if (wi != i || wj != j)
 							{
 								uint32_t dist_pix = finfo.window_size - std::abs(wi - i) + finfo.window_size - std::abs(new_wj - j);
@@ -690,8 +703,8 @@ static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 
 								if (tmp_p > 0)
 								{
-									finfo.pixel_variance[actual_index][new_wj][wi] = finfo.pixel_variance[prev_index][new_wj][wi] + 1;// = pixel_diff;
-									finfo.variance[actual_index][new_wj][wi] = finfo.variance[prev_index][new_wj][wi] + tmp_p;
+									finfo.pixel_variance[actual_index][nwj][wwi] = finfo.pixel_variance[prev_index][nwj][wwi] + 1;// = pixel_diff;
+									finfo.variance[actual_index][nwj][wwi] = finfo.variance[prev_index][nwj][wwi] + tmp_p;
 									//ocurrences[j][i]++;
 								}
 
@@ -702,8 +715,8 @@ static int filter_step(filter_info& finfo, std::vector<uint64_t>& diffs)
 									//ocurrences[j][i]++;
 								}*/
 
-								if ((finfo.pixel_variance[prev_index][new_wj][wi] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][new_wj][wi] / (float)(finfo.frame_n + 1)) * 6 > tmp_p) tmp_p = 0;
-								if ((finfo.pixel_variance[prev_index][old_wj][wi] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][old_wj][wi] / (float)(finfo.frame_n + 1)) * 6 > old_tmp_p) old_tmp_p = 0;
+								if ((finfo.pixel_variance[prev_index][nwj][wwi] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][nwj][wwi] / (float)(finfo.frame_n + 1)) * 6 > tmp_p) tmp_p = 0;
+								if ((finfo.pixel_variance[prev_index][owj][wwi] / (float)(finfo.frame_n + 1)) > 0.5 && (finfo.variance[prev_index][owj][wwi] / (float)(finfo.frame_n + 1)) * 6 > old_tmp_p) old_tmp_p = 0;
 
 								accumulation += tmp_p;
 
