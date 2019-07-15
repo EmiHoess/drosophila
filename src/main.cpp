@@ -98,6 +98,7 @@ bool check_floating_point(std::string astring)
 filter_D filter;
 std::vector<uint64_t> diffs;
 
+bool done = false;
 
 int main(int argc, const char *argv[])
 {
@@ -229,7 +230,7 @@ int main(int argc, const char *argv[])
 	std::thread filter_worker;
 	filter_worker = std::thread([&]() {
 		int res = 0;
-		while (res = ffmpeg_step(filter.info_ffmpeg, filter.frame, filter.packet, filter.audio_p), res != 1)
+		while (res = ffmpeg_step(filter.info_ffmpeg, filter.frame, filter.packet, filter.audio_p), res != 1 && !done)
 		{
 
 			if (res != -2) {
@@ -240,7 +241,7 @@ int main(int argc, const char *argv[])
 				filter.finfo.b_height = filter.info_ffmpeg.pCodecCtx->height;
 				filter.finfo.b_offset = 3;
 
-				filter_step(filter.finfo, diffs);
+				//filter_step(filter.finfo, diffs);
 			}
 		}
 	});/**/
@@ -252,7 +253,7 @@ int main(int argc, const char *argv[])
 	img_id = create_image_buffer(the_video);
 
     // Main loop
-    bool done = false;
+    
     while (!done)
     {
 		int res = 2;
@@ -306,6 +307,14 @@ int main(int argc, const char *argv[])
 		ImGui::End();
 
 
+		ImGui::Begin("Video Information");                         
+		ImGui::Text("WASD.");
+		if (ImGui::Button("Stop"))
+		{
+			done = true;
+		}
+
+		ImGui::End();
         // Rendering
         ImGui::Render();
         SDL_GL_MakeCurrent(window, gl_context);
@@ -333,7 +342,7 @@ int main(int argc, const char *argv[])
 	std::cout << flying_time_in_seconds << std::endl;
 	fd_output_file.close();
 	time_output_file.close();
-	return 1;/**/
+	//return 1;/**/
 
 
     // Cleanup
