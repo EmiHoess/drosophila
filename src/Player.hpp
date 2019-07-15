@@ -474,6 +474,8 @@ static int init_ffmpeg(const file_video& info_file, ffmpeg_video& info_ffmpeg, S
 	srcRange = 1; // this marks that values are according to yuvj
 	sws_setColorspaceDetails(swsCtx, coefs, srcRange, coefs, dstRange,
 		brightness, contrast, saturation);
+
+	return 1;
 }
 static int init_frame(ffmpeg_frame& frame)
 {
@@ -484,7 +486,7 @@ static int init_frame(ffmpeg_frame& frame)
 	}
 
 
-
+	return 1;
 	
 }
 static int putAudioPacket(audio_packet *q, AVPacket *pkt)
