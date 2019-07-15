@@ -281,7 +281,7 @@ int main(int argc, const char *argv[])
 #endif
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, the_video.width, the_video.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, the_video.pixels);
 		}
-
+/**/
 
 
         // Poll and handle events (inputs, window resize, etc.)
@@ -356,7 +356,14 @@ int main(int argc, const char *argv[])
 
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
-    SDL_Quit();
+
+
+	av_free(filter.frame.pFrame);
+	avcodec_close(filter.info_ffmpeg.pCodecCtx);
+	av_free(filter.info_ffmpeg.pCodecCtx);
+	avformat_close_input(&filter.info_ffmpeg.pFormatCtx);
+	//SDL_CloseAudio();
+	SDL_Quit();
 
     return 0;
 }

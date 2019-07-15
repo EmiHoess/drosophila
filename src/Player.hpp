@@ -435,10 +435,10 @@ static int init_ffmpeg(const file_video& info_file, ffmpeg_video& info_ffmpeg, S
 	wantedSpec.padding = 0;
 	wantedSpec.size = 0;
 
-	if (SDL_OpenAudio(&wantedSpec, &audioSpec) < 0) {
+	/*if (SDL_OpenAudio(&wantedSpec, &audioSpec) < 0) {
 		std::cout << "" << std::endl;
 		exit(-1);
-	}
+	}*/
 	wanted_frame.format = AV_SAMPLE_FMT_S16;
 	wanted_frame.sample_rate = audioSpec.freq;
 	wanted_frame.channel_layout = av_get_default_channel_layout(audioSpec.channels);
